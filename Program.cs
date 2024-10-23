@@ -1,6 +1,8 @@
 ﻿using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO.Compression;
 using System.Net.NetworkInformation;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using Microsoft.Win32;
 using Newtonsoft.Json;
@@ -8,7 +10,7 @@ using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
 namespace LiarsBarEnhanceInstaller;
 
-class Program
+static class Program
 {
     public static readonly Version CurrentVersion = new(1, 0, 1);
     
@@ -56,15 +58,15 @@ class Program
     public const string Default_BepInEx_Version = "5.4.23.2";
     public const string Default_LiarsBarEnhance_Version = "1.0.0";
     public const string Default_LiarsBarEnhance_Name = "com.github.dogdie233.LiarsBarEnhance.dll";
-    public const string Default_BepInEx_Name = "BepInEx_win_x64_5.4.23.2.zip";
+    public const string Default_BepInEx_Name = "BepInEx_win_{arch}_{version}.zip";
 
     public const string ModGithubUrl = "https://github.com/dogdie233/LiarsBarEnhance/releases/download/{version}/{name}";
-    public const string BepInExGithubUrl = "https://github.com/BepInEx/BepInEx/releases/download/{version}/{name}";
+    public const string BepInExGithubUrl = "https://github.com/BepInEx/BepInEx/releases/download/v{version}/{name}";
     public const string InstallerGithubUrl = "https://github.com/TianMengLucky/LiarsBarEnhanceInstaller/releases/download/{version}/LiarsBarEnhanceInstaller.exe";
-    public const string InfoUrl =
-        "https://raw.githubusercontent.com/TianMengLucky/LiarsBarEnhanceInstaller/refs/heads/main/DownloadInfo.json";
+    public const string InfoUrl = "https://raw.githubusercontent.com/TianMengLucky/LiarsBarEnhanceInstaller/refs/heads/main/DownloadInfo.json";
 
     public static DownloadInfo? CurrentInfo;
+    public static string Arch = "x64";
 
     private static string GetGamePathFormSteamPath()
     {
@@ -141,11 +143,22 @@ class Program
         return await client.GetStreamAsync(downloadUrl);
     }
 
+    private static bool Has<T>(this T @enum, params T[] values) where T : Enum
+    { 
+        foreach (var value in values)
+        {
+            if (@enum.HasFlag(value))
+                return true;
+        }
+
+        return false;
+    }
+
     private static async Task InstallModTo(string Path, DownloadInfo info)
     {
         await using var modStream = await DownloadFormGithub(
             ModGithubUrl
-                .Replace("{version｝", info.LiarsBarEnhance_Version)
+                .Replace("{version}", info.LiarsBarEnhance_Version)
                 .Replace("{name}", info.LiarsBarEnhance_Name)
             );
         await using var dllStream = File.Open(Path, FileMode.OpenOrCreate);
@@ -155,17 +168,21 @@ class Program
 
     private static async Task InstallBepInExTo(string path, DownloadInfo info)
     {
+        Arch = RuntimeInformation.ProcessArchitecture.HasFlag(Architecture.X64) ? "x64" : "x86";
+        Log("Arch:" + Arch);
+        
         var bepInExStream = await DownloadFormGithub(
             BepInExGithubUrl
-                .Replace("{version｝", info.BepInEx_Version)
-                .Replace("{name}", info.BepInEx_Name
-                )
+                .Replace("{version}", info.BepInEx_Version)
+                .Replace("{name}", info.BepInEx_Name)
+                .Replace("{arch}", Arch)
             );
         
         using var zip = new ZipArchive(bepInExStream, ZipArchiveMode.Read);
         zip.ExtractToDirectory(path, true);
         Log("安装BepInEx完成");
     }
+
 
     private static async Task CheckInstall(string gamePath, DownloadInfo info)
     {
@@ -182,11 +199,25 @@ class Program
         
         var orgDllPath = Path.Combine(pluginDir, "com.github.dogdie233.LiarsBarEnhance.dll");
         var dllPath = Path.Combine(pluginDir, "LiarsBarEnhance.dll");
+        
+        CheckDllVersion(orgDllPath, info);
+        CheckDllVersion(dllPath, info);
+        
         if (!File.Exists(dllPath) && !File.Exists(orgDllPath))
         {
             Log("不存在LiarsBarEnhance,开始安装LiarsBarEnhance");
             await InstallModTo(dllPath, info);
         }
+    }
+
+    [UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "<Pending>")]
+    private static void CheckDllVersion(string path, DownloadInfo info)
+    {
+        if (!File.Exists(path)) return;
+        var assembly = Assembly.LoadFrom(path);
+        var version = assembly.GetName().Version;
+        if (version == null || version < new Version(info.LiarsBarEnhance_Version))
+            File.Delete(path);
     }
 
     public static StreamWriter? _Writer;
