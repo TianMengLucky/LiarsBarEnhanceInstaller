@@ -8,6 +8,11 @@
         <Nullable>enable</Nullable>
         <PublishAot>true</PublishAot>
         <InvariantGlobalization>true</InvariantGlobalization>
+        <OutDir>./Output</OutDir>
     </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    </ItemGroup>
 
 </Project>

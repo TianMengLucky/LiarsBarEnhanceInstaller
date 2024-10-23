@@ -1,13 +1,17 @@
-﻿using System.IO.Compression;
+﻿using System.Diagnostics;
+using System.IO.Compression;
 using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
-using System.Text;
 using Microsoft.Win32;
+using Newtonsoft.Json;
+using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
 namespace LiarsBarEnhanceInstaller;
 
 class Program
 {
+    public static readonly Version CurrentVersion = new(1, 0, 1);
+    
     public static readonly string[] AllGithubProxy = 
         [
             "https://gh.llkk.cc",
@@ -41,8 +45,26 @@ class Program
     
     public const string DefaultSteamPath = @"C:\Program Files (x86)\Steam";
 
-    public const string ModGithubUrl = "https://github.com/dogdie233/LiarsBarEnhance/releases/download/1.0.0/com.github.dogdie233.LiarsBarEnhance.dll";
-    public const string BepInExGithubUrl = "https://github.com/BepInEx/BepInEx/releases/download/v5.4.23.2/BepInEx_win_x64_5.4.23.2.zip";
+    public static readonly DownloadInfo DefaultDownloadInfo = new()
+    {
+        BepInEx_Version = Default_BepInEx_Version,
+        LiarsBarEnhance_Version = Default_LiarsBarEnhance_Version,
+        LiarsBarEnhance_Name = Default_LiarsBarEnhance_Name,
+        BepInEx_Name = Default_BepInEx_Name
+    };
+    
+    public const string Default_BepInEx_Version = "5.4.23.2";
+    public const string Default_LiarsBarEnhance_Version = "1.0.0";
+    public const string Default_LiarsBarEnhance_Name = "com.github.dogdie233.LiarsBarEnhance.dll";
+    public const string Default_BepInEx_Name = "BepInEx_win_x64_5.4.23.2.zip";
+
+    public const string ModGithubUrl = "https://github.com/dogdie233/LiarsBarEnhance/releases/download/{version}/{name}";
+    public const string BepInExGithubUrl = "https://github.com/BepInEx/BepInEx/releases/download/{version}/{name}";
+    public const string InstallerGithubUrl = "https://github.com/TianMengLucky/LiarsBarEnhanceInstaller/releases/download/{version}/LiarsBarEnhanceInstaller.exe";
+    public const string InfoUrl =
+        "https://raw.githubusercontent.com/TianMengLucky/LiarsBarEnhanceInstaller/refs/heads/main/DownloadInfo.json";
+
+    public static DownloadInfo? CurrentInfo;
 
     private static string GetGamePathFormSteamPath()
     {
@@ -57,6 +79,36 @@ class Program
         
         Log("游戏根目录为:" + gamePath);
         return gamePath;
+    }
+
+    private static async Task CheckAndUpdateInstaller(DownloadInfo info)
+    {
+        if (info.LatestInstallVersion.CompareTo(CurrentVersion) > 0)
+        {
+            Log("发现新版本, 开始下载");
+            await using var stream = await DownloadFormGithub(InstallerGithubUrl.Replace("{version}", info.LatestInstallVersion.ToString()));
+            await using var fileStream = new FileStream("LiarsBarEnhanceInstaller_New.exe", FileMode.Create);
+            await stream.CopyToAsync(fileStream);
+
+            Process.Start("LiarsBarEnhanceInstaller_New.exe");
+            Environment.Exit(0);
+        }
+    }
+
+    private static async Task<DownloadInfo?> GetDownloadInfo()
+    {
+        Log("尝试获得下载信息");
+        try
+        {
+            await using var infoStream = await DownloadFormGithub(InfoUrl);
+            return JsonSerializer.CreateDefault().Deserialize<DownloadInfo>(new JsonTextReader(new StreamReader(infoStream)));
+        }
+        catch (Exception e)
+        {
+            Log("无法获得下载信息:" + e.Message);
+        }
+
+        return null;
     }
 
     private static string GetSteamPathFormSteam()
@@ -89,29 +141,39 @@ class Program
         return await client.GetStreamAsync(downloadUrl);
     }
 
-    private static async Task InstallModTo(string Path)
+    private static async Task InstallModTo(string Path, DownloadInfo info)
     {
-        await using var modStream = await DownloadFormGithub(ModGithubUrl);
+        await using var modStream = await DownloadFormGithub(
+            ModGithubUrl
+                .Replace("{version｝", info.LiarsBarEnhance_Version)
+                .Replace("{name}", info.LiarsBarEnhance_Name)
+            );
         await using var dllStream = File.Open(Path, FileMode.OpenOrCreate);
         await modStream.CopyToAsync(dllStream);
         Log("安装模组完成");
     }
 
-    private static async Task InstallBepInExTo(string path)
+    private static async Task InstallBepInExTo(string path, DownloadInfo info)
     {
-        var bepInExStream = await DownloadFormGithub(BepInExGithubUrl);
+        var bepInExStream = await DownloadFormGithub(
+            BepInExGithubUrl
+                .Replace("{version｝", info.BepInEx_Version)
+                .Replace("{name}", info.BepInEx_Name
+                )
+            );
+        
         using var zip = new ZipArchive(bepInExStream, ZipArchiveMode.Read);
         zip.ExtractToDirectory(path, true);
         Log("安装BepInEx完成");
     }
 
-    private static async Task CheckInstall(string gamePath)
+    private static async Task CheckInstall(string gamePath, DownloadInfo info)
     {
         var bepInExDir = Path.Combine(gamePath, "BepInEx");
         if (!Directory.Exists(bepInExDir))
         {
             Log("不存在BepInEx,开始安装BepInEx");
-            await InstallBepInExTo(gamePath);
+            await InstallBepInExTo(gamePath, info);
         }
         
         var pluginDir = Path.Combine(bepInExDir, "plugins");
@@ -123,7 +185,7 @@ class Program
         if (!File.Exists(dllPath) && !File.Exists(orgDllPath))
         {
             Log("不存在LiarsBarEnhance,开始安装LiarsBarEnhance");
-            await InstallModTo(dllPath);
+            await InstallModTo(dllPath, info);
         }
     }
 
@@ -146,20 +208,49 @@ class Program
         
         Log("日志已创建");
         Log("开始尝试安装LiarsBarEnhance");
-        Log("请输入游戏根目录,如果为空将尝试自动获取");
+        Log("从Github获取下载信息");
+        CurrentInfo = await GetDownloadInfo();
+        if (CurrentInfo == null)
+        {
+            Log("获取信息失败使用默认下载");
+        }
+        else
+        {
+            Log("获取信息成功");
+            await CheckAndUpdateInstaller(CurrentInfo);
+            Log($"下载BepInEx版本:{CurrentInfo.BepInEx_Version}");
+            Log($"下载LiarsBarEnhance版本:{CurrentInfo.LiarsBarEnhance_Version}");
+        }
         
+        Log("请输入游戏根目录,如果为空将尝试自动获取");
         var path = Console.ReadLine()!;
         if (string.IsNullOrEmpty(path))
             path = GetGamePathFormSteamPath();
         if (string.IsNullOrEmpty(path))
             goto end;
         
-        await CheckInstall(path);
+        await CheckInstall(path, CurrentInfo ?? DefaultDownloadInfo);
         
         end:
         Log("程序运行结束按任意键退出");
         await _Writer.DisposeAsync()!;
         Console.ReadKey();
     }
+}
+
+public class DownloadInfo
+{
+    [JsonProperty("BepInExVersion")]
+    public string BepInEx_Version { get; set; }
     
+    [JsonProperty("LiarsBarEnhanceVersion")]
+    public string LiarsBarEnhance_Version { get; set; }
+    
+    [JsonProperty("BepInExName")]
+    public string BepInEx_Name { get; set; }
+    
+    [JsonProperty("LiarsBarEnhanceName")]
+    public string LiarsBarEnhance_Name { get; set; }
+    
+    public Version LatestInstallVersion { get; set; }
 }
