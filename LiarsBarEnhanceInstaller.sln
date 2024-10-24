@@ -1,8 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LiarsBarEnhanceInstaller", "LiarsBarEnhanceInstaller.csproj", "{7313B70B-B6B6-4D2B-8553-25CF461A5BC2}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModCleaner", "ModCleaner\ModCleaner.csproj", "{A0107047-60BA-4D16-9C4A-D8856FE74CAA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LiarsBarEnhanceInstaller", "Installer\LiarsBarEnhanceInstaller.csproj", "{96629045-BA52-435F-936C-1D11209B2AA2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -10,13 +10,13 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{7313B70B-B6B6-4D2B-8553-25CF461A5BC2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{7313B70B-B6B6-4D2B-8553-25CF461A5BC2}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{7313B70B-B6B6-4D2B-8553-25CF461A5BC2}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{7313B70B-B6B6-4D2B-8553-25CF461A5BC2}.Release|Any CPU.Build.0 = Release|Any CPU
 		{A0107047-60BA-4D16-9C4A-D8856FE74CAA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A0107047-60BA-4D16-9C4A-D8856FE74CAA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A0107047-60BA-4D16-9C4A-D8856FE74CAA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A0107047-60BA-4D16-9C4A-D8856FE74CAA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{96629045-BA52-435F-936C-1D11209B2AA2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{96629045-BA52-435F-936C-1D11209B2AA2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{96629045-BA52-435F-936C-1D11209B2AA2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{96629045-BA52-435F-936C-1D11209B2AA2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

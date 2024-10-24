@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.IO.Compression;
 using System.Net.NetworkInformation;
 using System.Reflection;
@@ -17,7 +16,6 @@ internal static class Program
 
     public static readonly Config DefaultConfig = new()
     {
-        AutoUpdate = true,
         EnableConsole = false,
         ProxyURL = "",
         UseProxy = true,
@@ -83,9 +81,6 @@ internal static class Program
 
     public const string BepInExGithubUrl = "https://github.com/BepInEx/BepInEx/releases/download/v{version}/{name}";
 
-    public const string InstallerGithubUrl =
-        "https://github.com/TianMengLucky/LiarsBarEnhanceInstaller/releases/download/{version}/LiarsBarEnhanceInstaller.exe";
-
     public const string InfoUrl =
         "https://raw.githubusercontent.com/TianMengLucky/LiarsBarEnhanceInstaller/refs/heads/main/DownloadInfo.json";
 
@@ -105,22 +100,6 @@ internal static class Program
 
         Log("游戏根目录为:" + gamePath);
         return gamePath;
-    }
-
-    private static async Task CheckAndUpdateInstaller(DownloadInfo info)
-    {
-        if (info.LatestInstallVersion == null) return;
-        if (info.LatestInstallVersion.CompareTo(CurrentVersion) > 0)
-        {
-            Log("发现新版本, 开始下载");
-            await using var stream =
-                await DownloadFormGithub(InstallerGithubUrl.Replace("{version}", info.LatestInstallVersion.ToString()));
-            await using var fileStream = new FileStream("LiarsBarEnhanceInstaller_New.exe", FileMode.Create);
-            await stream.CopyToAsync(fileStream);
-
-            Process.Start("LiarsBarEnhanceInstaller_New.exe");
-            Environment.Exit(0);
-        }
     }
     
     public static JsonSerializer Serializer = JsonSerializer.CreateDefault();
@@ -209,8 +188,8 @@ internal static class Program
 
         var bepInExStream = await DownloadFormGithub(
             BepInExGithubUrl
-                .Replace("{version}", info.BepInEx_Version)
                 .Replace("{name}", info.BepInEx_Name)
+                .Replace("{version}", info.BepInEx_Version)
                 .Replace("{arch}", Arch)
         );
 
@@ -304,7 +283,7 @@ internal static class Program
         return _Config;
     }
 
-    private static async Task Main(string[] args)
+    public static async Task Main()
     {
         var fileStream = File.Open("./Log.txt", FileMode.OpenOrCreate);
         _Writer = new StreamWriter(fileStream)
@@ -331,10 +310,6 @@ internal static class Program
         
         Log($"下载BepInEx版本:{CurrentInfo.BepInEx_Version}");
         Log($"下载LiarsBarEnhance版本:{CurrentInfo.LiarsBarEnhance_Version}");
-        if (CurrentConfig.AutoUpdate)
-        {
-            await CheckAndUpdateInstaller(CurrentInfo);
-        }
 
         string path;
         if (string.IsNullOrEmpty(CurrentConfig.GamePath))
@@ -365,7 +340,6 @@ internal static class Program
 public class Config
 {
     public bool UseProxy { get; set; }
-    public bool AutoUpdate { get; set; }
     public bool EnableConsole { get; set; }
     public string ProxyURL { get; set; } = "";
     public string GamePath { get; set; } = "";
@@ -385,7 +359,4 @@ public class DownloadInfo
     
     [JsonProperty("LiarsBarEnhanceName")]
     public required string LiarsBarEnhance_Name { get; set; }
-    
-    // ReSharper disable once UnusedAutoPropertyAccessor.Global
-    public Version? LatestInstallVersion { get; set; }
 }

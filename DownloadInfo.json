@@ -3,5 +3,4 @@
   "LiarsBarEnhanceVersion": "1.0.0",
   "BepInExName": "BepInEx_win_{arch}_{version}.zip",
   "LiarsBarEnhanceName" : "com.github.dogdie233.LiarsBarEnhance.dll",
-  "LatestInstallVersion" : "1.0.1"
 }

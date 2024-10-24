@@ -20,19 +20,19 @@ jobs:
           dotnet-version: 8.x
 
       - name: build
-        run: dotnet publish
+        run: dotnet publish ./Installer/LiarsBarEnhanceInstaller
 
       - name: upload
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: LiarsBarEnhanceInstaller
-          path: ./bin/Release/net8.0/publish/LiarsBarEnhanceInstaller.exe
+          path: ./Installer/bin/Release/net8.0/publish/LiarsBarEnhanceInstaller.exe
           
       - name: build Cleaner
         run: dotnet publish ./ModCleaner/ModCleaner.csproj
         
       - name: upload Cleaner
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ModCleaner
           path: ./ModCleaner/bin/Release/net8.0/publish/ModCleaner.exe
