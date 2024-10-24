@@ -26,4 +26,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: LiarsBarEnhanceInstaller
-          path: ./Output/LiarsBarEnhanceInstaller.exe
+          path: ./bin/Release/net8.0/publish/LiarsBarEnhanceInstaller.exe
