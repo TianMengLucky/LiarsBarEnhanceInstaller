@@ -303,8 +303,8 @@ internal static class Program
 
         return _Config;
     }
-    
-    static async Task Main(string[] args)
+
+    private static async Task Main(string[] args)
     {
         var fileStream = File.Open("./Log.txt", FileMode.OpenOrCreate);
         _Writer = new StreamWriter(fileStream)
@@ -353,40 +353,13 @@ internal static class Program
             Log("获取游戏目录失败");
             goto end;
         }
-        Log("请输入选项:\n1.安装\n2.卸载\n默认为安装");
-        var option = int.TryParse(Console.ReadLine(), out var result) ? result : 1;
-        if (option == 2)
-            Uninstall(path);
-        else
-            await CheckInstall(path, CurrentInfo);
+        await CheckInstall(path, CurrentInfo);
 
         end:
         Log("程序运行结束按任意键退出");
         await _Writer.DisposeAsync();
         Console.ReadKey();
     }
-
-    private static void Uninstall(string path)
-    {
-        foreach (var name in UnInstallFileList)
-        {
-            var itemPath = Path.Combine(path, name);
-            if (File.Exists(itemPath))
-                File.Delete(itemPath);
-            
-            if (Directory.Exists(itemPath))
-                Directory.Delete(itemPath, true);
-        }
-    }
-
-    public static readonly string[] UnInstallFileList =
-    [
-        ".doorstop_version",
-        "changelog.txt",
-        "doorstop_config.ini",
-        "winhttp.dll",
-        "BepInEx"
-    ];
 }
 
 public class Config

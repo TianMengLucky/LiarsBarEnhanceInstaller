@@ -27,3 +27,13 @@ jobs:
         with:
           name: LiarsBarEnhanceInstaller
           path: ./bin/Release/net8.0/publish/LiarsBarEnhanceInstaller.exe
+          
+      - name: build Cleaner
+        run: dotnet publish ./ModCleaner/ModCleaner.csproj
+        
+      - name: upload Cleaner
+        uses: actions/upload-artifact@v3
+        with:
+          name: ModCleaner
+          path: ./ModCleaner/bin/Release/net8.0/publish/ModCleaner.exe
+        
